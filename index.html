@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>Concerto per Gian</title>
+
+    <!-- Local Reveal.js Base Styles -->
+    <link rel="stylesheet" href="reveal.js/dist/reveal.css">
+    <link rel="stylesheet" href="reveal.js/dist/theme/black.css">
+
+    <!-- Embedded Ken Burns & Layout CSS -->
+    <style>
+      body, .reveal {
+        background-color: #000000 !important;
+      }
+
+      /* Isolated Viewport Canvas Wrapper */
+      .kb-slideshow-wrapper {
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 0 !important; 
+        overflow: hidden;
+        background-color: #000000 !important;
+        opacity: 0;
+        transition: opacity 400ms ease-in-out;
+        pointer-events: none;
+      }
+
+      .kb-slideshow-wrapper.visible {
+        opacity: 1;
+      }
+
+      /* Stack layer architecture layout */
+      .kb-slide-layer {
+        position: absolute;
+        top: 0; left: 0; 
+        width: 100vw !important; 
+        height: 100vh !important;
+        opacity: 0;
+        
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        
+        /* Transition ONLY opacity so alignment scales never jitter */
+        transition: opacity var(--fade-duration, 1200ms) ease-in-out;
+        will-change: transform, opacity;
+      }
+
+      .kb-slide-layer.fade-in {
+        opacity: 1;
+      }
+
+      /* Triggers the smooth zoom trajectory track */
+      .kb-slide-layer.zoom-loop {
+        animation: kenburnsLoop var(--slide-duration, 7400ms) ease-in-out forwards;
+      }
+
+      /* Maximize image to screen constraints with letterboxing rules preserved */
+      .kb-slide-layer img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: contain !important; 
+        display: block !important;
+      }
+
+      /* 
+        Linear smooth zoom scale curve. 
+        The target point coordinates are driven entirely by 'transform-origin' injected below.
+      */
+      @keyframes kenburnsLoop {
+        0% { 
+          transform: scale(1.0); 
+        }
+        100% { 
+          transform: scale(var(--zoom-intensity, 1.25)); 
+        }
+      }
+
+      /* Clear framework display rules */
+      .reveal, .reveal .slides, .reveal .slides section {
+        background: transparent !important;
+        background-color: transparent !important;
+      }
+    </style>
+  </head>
+  <body>
+
+    <!-- Target Media Backdrop Engine Mapping -->
+    <div id="global-kb-slideshow" class="kb-slideshow-wrapper">
+      <div id="kb-layer-1" class="kb-slide-layer">
+        <img id="kb-img-1" src="" alt="">
+      </div>
+      <div id="kb-layer-2" class="kb-slide-layer">
+        <img id="kb-img-2" src="" alt="">
+      </div>
+    </div>
+
+    <!-- Presentation Content Layers -->
+    <div class="reveal">
+      <div class="slides">
+
+	<section
+		data-background-image="slides/locandina.jpeg"
+		data-background-size="contain">
+        </section>
+
+	<section
+		data-background-image="slides/emerito.jpeg"
+		data-background-size="contain">
+        </section>
+
+        <section id="slideshow">
+        </section>
+
+	<section>
+		<img src="slides/dialetto.jpeg"></img>
+        </section>
+
+	<section>
+	  <video
+	    controls
+	    data-autoplay
+	    class="r-stretch"
+	    src="oh-dela-mula/oh-dela-mula-gian-corto.mp4">
+	  </video>
+	</section>
+
+	<section>
+	  <video
+	    controls
+	    data-autoplay
+	    class="r-stretch"
+	    src="oh-dela-mula/oh-dela-mula-luciano.mp4">
+	  </video>
+	</section>
+
+        <section id="slideshow-2">
+        </section>
+
+	<section></section>
+
+	<section
+		data-background-image="slides/locandina.jpeg"
+		data-background-size="contain">
+        </section>
+
+      </div>
+    </div>
+
+    <!-- Local Reveal.js Core Script -->
+    <script src="reveal.js/dist/reveal.js"></script>
+
+    <!-- Load the Images Array dynamically via script tag -->
+    <script src="images.js"></script>
+
+    <script>
+      // =========================================================================
+      // TIMELINE SPEED & PARAMETERS CONFIGURATION
+      // =========================================================================
+      const KB_CONFIG = {
+        imageVisibilityDuration: 8000, // Time image remains zooming before fading down (ms)
+        fadeDuration: 2000,            // Speed of dipping into the black canvas (ms)
+        zoomIntensity: 1.2            // Increased slightly to accommodate random panning margins
+      };
+
+      // Define an collection list of camera tracking anchor nodes
+      const PANS_COLLECTION = [
+        'top left', 'top center', 'top right',
+        'center left', 'center center', 'center right',
+        'bottom left', 'bottom center', 'bottom right'
+      ];
+
+      document.documentElement.style.setProperty('--fade-duration', `${KB_CONFIG.fadeDuration}ms`);
+      document.documentElement.style.setProperty('--slide-duration', `${KB_CONFIG.imageVisibilityDuration + (KB_CONFIG.fadeDuration * 2)}ms`);
+      document.documentElement.style.setProperty('--zoom-intensity', KB_CONFIG.zoomIntensity);
+
+      let images = window.slideshowImages || [];
+      let currentIndex = 0;
+      let slideshowTimeout = null;
+
+      const slideshowContainer = document.getElementById('global-kb-slideshow');
+      const layer1 = document.getElementById('kb-layer-1');
+      const layer2 = document.getElementById('kb-layer-2');
+      const img1 = document.getElementById('kb-img-1');
+      const img2 = document.getElementById('kb-img-2');
+      
+      let currentLayer = layer1;
+      let currentImg = img1;
+
+      // Helper function to pick and apply a random transform vector focus point
+      defTargetVector = (layerElement) => {
+        const randomVector = PANS_COLLECTION[Math.floor(Math.random() * PANS_COLLECTION.length)];
+        layerElement.style.transformOrigin = randomVector;
+      };
+
+      function startKenBurnsSlideshow() {
+        if (!images || images.length === 0) return;
+
+        slideshowContainer.classList.add('visible');
+        currentIndex = Math.floor(Math.random() * images.length);
+        
+        img1.src = ''; img2.src = '';
+        layer1.className = 'kb-slide-layer';
+        layer2.className = 'kb-slide-layer';
+        
+        currentLayer = layer1;
+        currentImg = img1;
+        currentImg.src = images[currentIndex];
+        
+        // Apply target tracking vector before entering the view
+        defTargetVector(currentLayer);
+        currentLayer.classList.add('zoom-loop', 'fade-in');
+
+        runSlideshowCycle();
+      }
+
+      function runSlideshowCycle() {
+        slideshowTimeout = setTimeout(() => {
+          
+          // Drop visibility while keeping the camera tracking loop running smoothly
+          currentLayer.classList.remove('fade-in');
+          
+          slideshowTimeout = setTimeout(() => {
+            
+            currentIndex = (currentIndex + 1) % images.length;
+            const nextImage = images[currentIndex];
+            
+            const nextLayer = (currentLayer === layer1) ? layer2 : layer1;
+            const nextImg = (currentLayer === layer1) ? img2 : img1;
+            
+            const oldLayer = currentLayer;
+            const oldImg = currentImg;
+            
+            nextImg.src = nextImage;
+
+            function triggerFadeIn() {
+              // Wipe out background loops completely
+              oldLayer.classList.remove('zoom-loop', 'fade-in');
+              oldImg.src = '';
+
+              // Pick a new unique random vector coordinate direction for the incoming asset
+              defTargetVector(nextLayer);
+
+              // Initialize next layer display tracking variables
+              nextLayer.classList.add('zoom-loop', 'fade-in');
+              
+              currentLayer = nextLayer;
+              currentImg = nextImg;
+              
+              runSlideshowCycle();
+            }
+
+            if (nextImg.complete) {
+              triggerFadeIn();
+            } else {
+              nextImg.onload = function() {
+                nextImg.onload = null;
+                triggerFadeIn();
+              };
+            }
+            
+          }, KB_CONFIG.fadeDuration);
+
+        }, KB_CONFIG.imageVisibilityDuration);
+      }
+
+      function stopKenBurnsSlideshow() {
+        clearTimeout(slideshowTimeout);
+        slideshowTimeout = null;
+        slideshowContainer.classList.remove('visible');
+        img1.src = ''; img2.src = '';
+        layer1.className = 'kb-slide-layer';
+        layer2.className = 'kb-slide-layer';
+      }
+
+      window.addEventListener('load', () => {
+        if (typeof Reveal !== 'undefined') {
+          Reveal.initialize({
+            hash: true,
+            history: true,
+            controls: false, 
+            progress: false,
+            keyboard: {
+              27: null // Disable ESC
+            }
+          }).then(() => {
+            if (Reveal.getCurrentSlide().id.startsWith('slideshow')) {
+              startKenBurnsSlideshow();
+            }
+          });
+
+          Reveal.on('slidechanged', event => {
+            if (event.currentSlide.id.startsWith('slideshow')) {
+              startKenBurnsSlideshow();
+            } else {
+              stopKenBurnsSlideshow();
+            }
+          });
+        }
+      });
+    </script>
+  </body>
+</html>
+
