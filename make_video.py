@@ -15,7 +15,7 @@ import tempfile
 from pathlib import Path
 
 IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
-EXCLUDE_KEYWORDS = {"small", "thumb"}
+EXCLUDE_KEYWORDS = {"small", "thumb", "reveal", "slides", "sections"}
 
 
 def discover_images(input_dir: str) -> list[Path]:
@@ -28,7 +28,7 @@ def discover_images(input_dir: str) -> list[Path]:
 
     for path in input_path.rglob("*"):
         if path.is_file() and path.suffix.lower() in IMAGE_EXTENSIONS:
-            filename_lower = path.name.lower()
+            filename_lower = str(path).lower()
             if not any(keyword in filename_lower for keyword in EXCLUDE_KEYWORDS):
                 valid_paths.append(path)
 
@@ -112,7 +112,7 @@ def generate_slideshow(
     image_paths = discover_images(str(input_path))
     if not image_paths:
         print(
-            f"Error: No valid image files found in '{input_path}' after filtering out 'small'/'thumb' files.",
+            f"Error: No valid image files found in '{input_path}' after filtering out excluded files.",
             file=sys.stderr,
         )
         sys.exit(1)
@@ -137,7 +137,7 @@ def generate_slideshow(
     print(" 🎬 SLIDESHOW GENERATION PREVIEW")
     print("=" * 55)
     print(f" • Input Directory        : {input_path}")
-    print(f" • Valid Images Found    : {total_images} (recursively scanned, 'small'/'thumb' ignored)")
+    print(f" • Valid Images Found    : {total_images} (recursively scanned")
     print(f" • Duration Per Slide    : {duration} seconds")
     print(f" • Fade Duration         : {actual_fade}s in / {actual_fade}s out")
     print(f" • Expected Total Length : {int(minutes)}m {seconds:.1f}s ({total_duration_sec:.1f} seconds total)")
@@ -236,8 +236,8 @@ def main() -> None:
     )
     parser.add_argument(
         "-i", "--input-dir",
-        default="./my_images",
-        help="Path to root folder containing source images (default: ./my_images)",
+        default=".",
+        help="Path to root folder containing source images (default: .)",
     )
     parser.add_argument(
         "-o", "--output",
@@ -247,14 +247,14 @@ def main() -> None:
     parser.add_argument(
         "-d", "--duration",
         type=float,
-        default=4.0,
-        help="Slide duration in seconds per image (default: 4.0)",
+        default=10.0,
+        help="Slide duration in seconds per image (default: 10.0)",
     )
     parser.add_argument(
         "-f", "--fade-duration",
         type=float,
-        default=0.5,
-        help="Fade in/out duration in seconds per slide (default: 0.5, set to 0 to disable)",
+        default=2.0,
+        help="Fade in/out duration in seconds per slide (default: 2.0, set to 0 to disable)",
     )
     parser.add_argument(
         "-m", "--pan-speed",
@@ -265,8 +265,8 @@ def main() -> None:
     parser.add_argument(
         "--fps",
         type=int,
-        default=30,
-        help="Frame rate of generated video (default: 30)",
+        default=25,
+        help="Frame rate of generated video (default: 25)",
     )
     parser.add_argument(
         "-s", "--size",
